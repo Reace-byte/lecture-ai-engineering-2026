@@ -4,7 +4,7 @@ TestModel は実際のLLMを呼ばない偽モデルで、登録されたツー�
 ダミーの回答を返す。APIキーも利用枠も使わずに、
 「ツールが登録され、呼ばれ、結果がモデルに戻るか」を確かめられる。
 """
-
+from pydantic_ai import DeferredToolRequests
 from pydantic_ai.messages import ToolCallPart, ToolReturnPart
 from pydantic_ai.models.test import TestModel
 
@@ -18,7 +18,7 @@ def _parts(result, kind):
 
 
 def test_base_tools_are_registered_and_called():
-    model = TestModel()
+    model = TestModel(call_tools=sorted(BASE_TOOLS))
     with agent.override(model=model):
         result = agent.run_sync("LoRAとは？")
 

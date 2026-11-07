@@ -5,6 +5,7 @@
 """
 
 import json
+import random
 from functools import cache
 from pathlib import Path
 
@@ -26,6 +27,46 @@ def _names(entry: dict) -> list[str]:
     return [_normalize(entry["term"]), _normalize(entry["id"])] + [
         _normalize(a) for a in entry["aliases"]
     ]
+
+
+def make_quiz(lecture: int) -> str:
+    """指定した回の用語から1つを選び、確認問題と答えを返す。
+
+    「第2回の確認問題を出して」のように、
+    復習用の問題を求められたときに使う。
+
+    Args:
+        lecture: 確認問題を作成する講義回（1始まりの整数）
+    """
+    # 指定した回の用語を用語集から取得する
+    glossary = load_glossary()
+
+    terms = [
+        entry
+        for entry in glossary
+        if entry["lecture"] == lecture
+    ]
+
+    # 該当する用語がない場合
+    if not terms:
+        return json.dumps(
+            {
+                "question": None,
+                "answer": f"第{lecture}回の用語が見つかりませんでした。"
+            },
+            ensure_ascii=False
+        )
+
+    # 用語をランダムに1つ選ぶ
+    selected = random.choice(terms)
+
+    # 確認問題と答えを生成する
+    quiz = {
+        "question": f"「{selected['term']}」の意味は？",
+        "answer": selected["definition"]
+    }
+
+    return json.dumps(quiz, ensure_ascii=False)
 
 
 def search_glossary(query: str) -> str:
