@@ -1,0 +1,2 @@
+{"id": "01", "category": "通常", "question": "LoRAとはどのような仕組みですか？", "answer": "", "reference": {"glossary": [], "expected": "用語集の定義に基づいて説明する"}}
+{"id": "02", "category": "通常", "question": "QLoRAでは、なぜGPUメモリを節約できるのですか？", "answer": "", "reference": {"glossary": [], "expected": "量子化とLoRAの関係を正しく説明する"}}
