@@ -1,0 +1,32 @@
+[1mdiff --git a/tests/test_agent.py b/tests/test_agent.py[m
+[1mindex 30436f5..931c81d 100644[m
+[1m--- a/tests/test_agent.py[m
+[1m+++ b/tests/test_agent.py[m
+[36m@@ -4,12 +4,9 @@[m [mTestModel は実際のLLMを呼ばない偽モデルで、登録されたツー[m
+ ダミーの回答を返す。APIキーも利用枠も使わずに、[m
+ 「ツールが登録され、呼ばれ、結果がモデルに戻るか」を確かめられる。[m
+ """[m
+[31m-<<<<<<< HEAD[m
+[31m-=======[m
+ [m
+ import json[m
+ [m
+[31m->>>>>>> upstream/main[m
+ from pydantic_ai import DeferredToolRequests[m
+ from pydantic_ai.messages import ToolCallPart, ToolReturnPart[m
+ from pydantic_ai.models.test import TestModel[m
+[36m@@ -23,14 +20,11 @@[m [mdef _parts(result, kind):[m
+     return [p for m in result.all_messages() for p in m.parts if isinstance(p, kind)][m
+ [m
+ [m
+[31m-<<<<<<< HEAD[m
+ def test_base_tools_are_registered_and_called():[m
+     model = TestModel(call_tools=sorted(BASE_TOOLS))[m
+[31m-=======[m
+ def test_base_tools_are_registered_and_called(monkeypatch):[m
+     monkeypatch.setattr("app.retrieval.search", lambda *args, **kwargs: [])[m
+     model = TestModel()[m
+[31m->>>>>>> upstream/main[m
+     with agent.override(model=model):[m
+         result = agent.run_sync("LoRAとは？")[m
+ [m

@@ -5,6 +5,7 @@ import json
 import math
 import re
 import sqlite3
+import os
 from contextlib import contextmanager
 from collections import defaultdict, deque
 from pathlib import Path
@@ -125,18 +126,71 @@ def open_index(path: Path):
 
 
 def search(query: str) -> list[dict]:
-    """質問を埋め込み、近いページを最大RAG_TOP_K件返す。"""
+    """質問に近いページを検索し、設定に応じて前後1ページも取得する。"""
     if not isinstance(query, str) or not query.strip():
         raise ValueError("検索語が空です。")
+
+    # 従来のベクトル検索
     with open_index(RAG_DB) as db:
         vector = embed_text(query.strip(), "RETRIEVAL_QUERY")
         rows = db.execute("""
-            SELECT page_id, document_id, lecture, document_title, section, title, page, content,
+            SELECT page_id, document_id, lecture, document_title,section, title, page, content,
                    vec_distance_cosine(embedding, ?) AS distance
-            FROM chunks ORDER BY distance, page_id LIMIT ?
+            FROM chunks
+            ORDER BY distance, page_id
+            LIMIT ?
         """, (sqlite_vec.serialize_float32(vector), RAG_TOP_K))
-        return [dict(row) for row in rows]
 
+        hits = [dict(row) for row in rows]
+
+    # 通常モードでは従来の検索結果をそのまま返す
+    if os.getenv("AIE_RAG_NEIGHBORS", "0") != "1":
+        return hits
+
+    # 前後ページ検索モード
+    pages = load_pages(RAG_SOURCE)
+
+    # 同じ資料内でページ番号から検索できる辞書を作成
+    page_lookup = {
+        (page["document_id"], int(page["page"])): page
+        for page in pages
+    }
+
+       # 元の検索結果はすべて保持する
+    results = [
+        {**hit, "retrieval_role": "hit"}
+        for hit in hits
+    ]
+
+    # 重複を防止する
+    seen = {hit["page_id"] for hit in hits}
+
+    # すべての検索結果について前後1ページを確認
+    for hit in hits:
+        document_id = hit["document_id"]
+        page_number = int(hit["page"])
+
+        for neighbor_number in (page_number - 1, page_number + 1):
+            neighbor = page_lookup.get(
+                (document_id, neighbor_number)
+            )
+
+            if neighbor is None:
+                continue
+
+            if neighbor["page_id"] in seen:
+                continue
+
+            results.append({
+                **neighbor,
+                "distance": hit["distance"],
+                "retrieval_role": "neighbor",
+                "neighbor_of": hit["page_id"],
+            })
+
+            seen.add(neighbor["page_id"])
+
+    return results
 
 def search_graph(query: str) -> dict:
     """ベクトル検索を入口に、前後ページと共通用語で候補を広げる。"""
